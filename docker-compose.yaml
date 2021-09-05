@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  etl:
+    container_name: etl
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    command: sh -c "python main.py"
+    volumes:
+      - ./sqlite_to_postgres:/app
+
+  db:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      - POSTGRES_PASSWORD=passwd
+    ports:
+      - "8432:5432"
+    volumes:
+      - ./schema_design/init.sql:/docker-entrypoint-initdb.d/init.sql
