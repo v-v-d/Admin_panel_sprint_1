@@ -19,6 +19,7 @@ services:
       - DB_PASSWORD=passwd
       - DB_HOST=db
       - DB_PORT=5432
+      - SECRET_KEY=ultrasupersecretkey
 
   etl:
     container_name: etl
