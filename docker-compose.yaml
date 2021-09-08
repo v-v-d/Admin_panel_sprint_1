@@ -1,11 +1,30 @@
 version: "3.8"
 
 services:
+  app:
+    container_name: admin-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    command: sh -c "python manage.py migrate && python manage.py makemigrations && python manage.py migrate --fake && python manage.py create_superuser && python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./movies_admin:/app
+    environment:
+      - DB_NAME=movies
+      - DB_USER=postgres
+      - DB_PASSWORD=passwd
+      - DB_HOST=db
+      - DB_PORT=5432
+
   etl:
     container_name: etl
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: sqlite_to_postgres/Dockerfile
     depends_on:
       - db
     command: sh -c "python main.py"

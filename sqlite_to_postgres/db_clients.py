@@ -15,6 +15,11 @@ class DBError(Exception):
     pass
 
 
+class OnDeleteEnum(str, Enum):
+    CASCADE = "CASCADE"
+    DO_NOTHING = "DO NOTHING"
+
+
 class BaseEnum(Enum):
     @classmethod
     def all_names(cls):
@@ -185,6 +190,7 @@ class PostgresDBClient:
         fk_name: str,
         fk_field: TableFKFieldsEnum,
         db_pool: asyncpg.pool.Pool = None,
+        on_delete_cascade: bool = False,
     ) -> None:
         """Add foreign key to target table."""
         query = f"""
@@ -192,8 +198,11 @@ class PostgresDBClient:
         ADD CONSTRAINT {fk_name}
         FOREIGN KEY ({fk_field}) 
         REFERENCES {settings.ETL.TARGET_DB.SCHEMA}.{reference_table_name} 
-        ({TableFKFieldsEnum.id.value})
+        ({TableFKFieldsEnum.id.value}) 
         """
+
+        if on_delete_cascade:
+            query += "ON DELETE CASCADE"
 
         try:
             await db_pool.execute(query)

@@ -2,13 +2,13 @@ FROM python:3.9-slim
 
 ENV PYTHONUNBUFFERED 1
 
-COPY requirements.txt .
+COPY requirements/base.txt .
+COPY requirements/dev.txt .
 
 RUN pip3 install --upgrade pip \
-    && pip3 install -r requirements.txt
+    && pip3 install -r dev.txt
 
-ADD ./sqlite_to_postgres /app
-ADD sqlite_to_postgres/settings /app/settings
+ADD movies_admin /app
 WORKDIR /app
 
 ENV PYTHONPATH=/app

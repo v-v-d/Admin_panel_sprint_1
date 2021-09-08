@@ -115,6 +115,7 @@ class MovieETL(ETL):
                         TableFKFieldsEnum.film_work_id.value
                     ),
                     fk_field=TableFKFieldsEnum.film_work_id.value,
+                    on_delete_cascade=True,
                 )
 
                 if table_name == TableNameEnum.genre_film_work:
