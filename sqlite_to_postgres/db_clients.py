@@ -54,27 +54,23 @@ class SQLiteDBClient:
     ROWS_LIMIT = settings.ETL.CHUNK_SIZE
     DB_NAME = settings.ETL.SOURCE_DB_DSN
 
-    class Decorators:
-        @classmethod
-        def db_session(cls, decorated: t.Callable):
-            """Decorator for db connection sharing between methods."""
+    def __init__(self):
+        self.database: t.Optional[aiosqlite.Connection] = None
 
-            async def wrapper(self, *args, **kwargs):
-                async with aiosqlite.connect(SQLiteDBClient.DB_NAME) as database:
-                    database.row_factory = aiosqlite.Row
-                    kwargs["database"] = database
-                    return await decorated(self, *args, **kwargs)
+    async def init_db(self) -> None:
+        try:
+            self.database = await aiosqlite.connect(SQLiteDBClient.DB_NAME)
+        except Exception as err:
+            raise DBError from err
 
-            return wrapper
+        self.database.row_factory = aiosqlite.Row
 
-    @Decorators.db_session
     async def fetch_page(
         self,
         table_name: str,
         offset: int,
         fields: t.Tuple[str] = None,
         mapping_schema: BaseModel = None,
-        database: aiosqlite.core.Connection = None,
     ) -> t.Union[t.Iterable[Row], t.List[BaseModel]]:
         """
         Fetch data from db with pagination. Pass a queryset row mapper
@@ -86,14 +82,19 @@ class SQLiteDBClient:
             (self.ROWS_LIMIT, offset),
         )
 
+        # Спасибо за коммент про курсор, учту на будущее, но в текущей реализации
+        # мы забираем из бд сразу пачку строк. Логика работы этого метода
+        # заключается в том, чтобы работать через пагинацию sqlite. Если будет
+        # необходимость забирать построчно из курсора данные, то тогда нужно будет
+        # в данном клиенте описать новый метод с такой логикой.
         try:
-            async with database.execute_fetchall(*query) as queryset:
+            async with self.database.execute_fetchall(*query) as queryset:
                 if mapping_schema:
                     return self.by_pydantic(queryset, mapping_schema)
 
                 return queryset
         except Exception as err:
-            raise DBError(err)
+            raise DBError from err
 
     @staticmethod
     def by_pydantic(queryset: t.Iterable[Row], schema: BaseModel) -> t.List[BaseModel]:
@@ -119,6 +120,9 @@ class SQLiteDBClient:
 
             offset += self.ROWS_LIMIT
 
+    async def close_db(self):
+        await self.database.close()
+
 
 class PostgresDBClient:
     class Decorators:
@@ -136,9 +140,15 @@ class PostgresDBClient:
     def __init__(
         self, null_value: t.Optional[str] = None, delimiter: t.Optional[str] = None
     ):
-        self.null_value = null_value or "None"
         self.delimiter = delimiter or "|"
         self.db_pool: t.Optional[asyncpg.pool.Pool] = None
+
+        # https://www.postgresql.org/docs/current/sql-copy.html
+        # Это для того, чтобы не было ошибки invalid input syntax for type date: "None"
+        # Т.е. надо бд сказать, что null значение не дефолтное \N (backslash-N)
+        # а именно "None". Можно было бы конечно и в пидантик схеме подменить None на \N
+        # но кажется, что лучше эту логику описать в клиенте к бд.
+        self.null_value = null_value or "None"
 
     async def init_db(self):
         """Initialize db connection pool."""
@@ -180,7 +190,7 @@ class PostgresDBClient:
                 null=self.null_value,
             )
         except Exception as err:
-            raise DBError(err)
+            raise DBError from err
 
     @Decorators.db_session
     async def add_foreign_key(
@@ -193,6 +203,11 @@ class PostgresDBClient:
         on_delete_cascade: bool = False,
     ) -> None:
         """Add foreign key to target table."""
+
+        # Если задать форен кеи до вставки данных в бд, то мы поймаем ошибку,
+        # связанную с тем, что в поле с форен кеем лежит айди, которого
+        # еще нет в связанной таблице. Поэтому я в sql скрипте убрал форен кеи
+        # и перенес их на этот этап.
         query = f"""
         ALTER TABLE {settings.ETL.TARGET_DB.SCHEMA}.{target_table_name}
         ADD CONSTRAINT {fk_name}
@@ -207,4 +222,4 @@ class PostgresDBClient:
         try:
             await db_pool.execute(query)
         except Exception as err:
-            raise DBError(err)
+            raise DBError from err

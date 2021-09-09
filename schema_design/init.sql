@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS content.film_work (
     certificate VARCHAR(255),
     file_path VARCHAR(255),
     rating FLOAT,
-    type VARCHAR(255) NOT NULL,
+    type VARCHAR(20) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE
 );
@@ -49,7 +49,7 @@ CREATE UNIQUE INDEX film_work_genre ON content.genre_film_work (film_work_id, ge
 CREATE TABLE IF NOT EXISTS content.person (
     id uuid PRIMARY KEY,
     full_name VARCHAR(255),
-    birth_date TIMESTAMP WITH TIME ZONE,
+    birth_date DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE
 );
@@ -59,9 +59,8 @@ CREATE TABLE IF NOT EXISTS content.person_film_work (
     id uuid PRIMARY KEY,
     film_work_id uuid,
     person_id uuid,
-    role VARCHAR(255),
+    role VARCHAR(20),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE UNIQUE INDEX film_work_person_role ON content.person_film_work (film_work_id, person_id, role);
-CREATE INDEX ON content.person_film_work(person_id, role);

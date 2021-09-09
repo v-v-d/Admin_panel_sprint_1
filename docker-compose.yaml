@@ -20,6 +20,7 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - SECRET_KEY=ultrasupersecretkey
+      - ALLOWED_HOSTS=["*"]
 
   etl:
     container_name: etl

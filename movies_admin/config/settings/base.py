@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -12,7 +13,10 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = False
 
-ALLOWED_HOSTS = []
+try:
+    ALLOWED_HOSTS = json.loads(os.getenv('ALLOWED_HOSTS'))
+except (TypeError, json.decoder.JSONDecodeError):
+    ALLOWED_HOSTS = []
 
 
 INSTALLED_APPS = [

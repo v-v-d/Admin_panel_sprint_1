@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class AbstractUUID(models.Model):
@@ -57,7 +57,9 @@ class FilmWork(AbstractTimeStamped, AbstractUUID):
     creation_date = models.DateField(_('creation date'), blank=True)
     certificate = models.CharField(_('certificate'), max_length=255, blank=True)
     file_path = models.FileField(_('file'), upload_to='film_works/', blank=True)
-    rating = models.FloatField(_('rating'), validators=[MinValueValidator(0)], blank=True)
+    rating = models.FloatField(
+        _('rating'), validators=[MinValueValidator(0), MaxValueValidator(10)], blank=True
+    )
     type = models.CharField(_('type'), max_length=20, choices=FilmWorkType.choices, default=FilmWorkType.MOVIE)
     genres = models.ManyToManyField(Genre, through='GenreFilmWork')
     persons = models.ManyToManyField(Person, through='PersonFilmWork')
@@ -66,6 +68,9 @@ class FilmWork(AbstractTimeStamped, AbstractUUID):
         verbose_name = _('film work')
         verbose_name_plural = _('film works')
         db_table = '"content"."film_work"'
+        indexes = [
+            models.Index(fields=['creation_date', 'rating'])
+        ]
 
     def __str__(self):
         return self.title
@@ -78,6 +83,7 @@ class GenreFilmWork(AbstractUUID):
 
     class Meta:
         db_table = '"content"."genre_film_work"'
+        unique_together = ['film_work', 'genre']
 
     def __str__(self):
         return str(self.pk)
@@ -97,6 +103,7 @@ class PersonFilmWork(AbstractUUID):
 
     class Meta:
         db_table = '"content"."person_film_work"'
+        unique_together = ['film_work', 'person', 'role']
 
     def __str__(self):
         return str(self.pk)

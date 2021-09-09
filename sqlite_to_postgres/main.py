@@ -14,7 +14,6 @@ from db_clients import (
     DBError,
 )
 from schemas import SchemaByTableEnum
-from settings import settings
 
 
 logger = getLogger(__name__)
@@ -43,64 +42,78 @@ class MovieETL(ETL):
         self.source_db_client: SQLiteDBClient = SQLiteDBClient()
         self.target_db_client: PostgresDBClient = PostgresDBClient()
 
-        self.raw_data: t.Optional[t.List[BaseModel]] = []
-        self.transformed_data: t.Optional[t.List[t.Dict[str, t.Any]]] = []
+    async def run(self) -> None:
+        """Run etl concurrently."""
+        # Спасибо за комменты и особенно за коммент про асинхронность)
+        # Я как-то действительно упустил этот момент
+        tasks: t.List[asyncio.Task] = []
 
-    async def run(self):
-        """Run etl by chunks with settings.ETL.CHUNK_SIZE."""
+        for table_name in TableNameEnum.all_names():
+            tasks.append(asyncio.create_task(self.run_etl_by_table_name(table_name)))
+
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        await self.after_load()
+
+    async def run_etl_by_table_name(self, table_name: TableNameEnum):
+        """Run etl by table name."""
         try:
-            async for table_name in self.extract():
-                await self.transform()
-                await self.load(table_name)
-
-            await self.after_load()
+            async for chunk in self.extract(table_name):
+                transformed_data = await self.transform(chunk)
+                await self.load(table_name, transformed_data)
         except Exception as err:
-            raise ETLError(err)
+            raise ETLError from err
 
-    async def extract(self) -> t.AsyncIterator[TableNameEnum]:
+    async def extract(
+        self, table_name: TableNameEnum
+    ) -> t.AsyncIterator[t.List[BaseModel]]:
         """
         Extract data from source to in-memory storage named self.raw_data.
         """
-        for table_name in TableNameEnum.all_names():
-            schema = getattr(SchemaByTableEnum, table_name)
+        schema = getattr(SchemaByTableEnum, table_name)
 
-            async for chunk in self.source_db_client.fetch(
-                table_name, mapping_schema=schema.value
-            ):
-                logger.debug(
-                    "Success extraction data from %s table, chunk len %s",
-                    table_name,
-                    len(chunk),
-                )
+        async for chunk in self.source_db_client.fetch(
+            table_name, mapping_schema=schema.value
+        ):
+            logger.debug(
+                "Success extraction data from %s table, chunk len %s",
+                table_name,
+                len(chunk),
+            )
 
-                for item in chunk:
-                    if len(self.raw_data) == settings.ETL.CHUNK_SIZE:
-                        yield table_name
-                        self.raw_data = []
+            yield chunk
 
-                    self.raw_data.append(item)
-
-            yield table_name
-            self.raw_data = []
-
-    async def transform(self) -> None:
+    async def transform(
+        self, raw_data: t.List[BaseModel]
+    ) -> t.List[t.Dict[str, t.Any]]:
         """
         Transform extracted data and save it to in-memory storage named
         self.transformed_data.
         """
-        self.transformed_data = [data.dict() for data in self.raw_data]
+        # В комменте был вопрос, поэтому я отвечаю. Не очень хочется связывать
+        # пидантик схемы с клиентом к бд, т.к. в схемах может быть дополнительная
+        # логика по трансформации данных. Либо в этом методе может быть такая
+        # логика. Кажется, что логичней будет в клиент к бд передавать уже обработанные
+        # примитивные данные. В клиенте к sqlite я использовал конвертацию словарей в
+        # пидантик, но сделал это как необязательное дополнение.
+        return [data.dict() for data in raw_data]
 
-    async def load(self, table_name: TableNameEnum) -> None:
+    async def load(
+        self, table_name: TableNameEnum, transformed_data: t.List[t.Dict[str, t.Any]]
+    ) -> None:
         """Load transformed data to target."""
-        if not self.transformed_data:
+        if not transformed_data:
             return
 
         try:
-            await self.target_db_client.insert_by_copy(
-                table_name, self.transformed_data
+            await self.target_db_client.insert_by_copy(table_name, transformed_data)
+            logger.debug(
+                "Success load data to %s table, chunk len %s",
+                table_name,
+                len(transformed_data),
             )
         except DBError as err:
-            logger.error("Failed to load data to db! Error: %s", err, exc_info=True)
+            logger.exception("Failed to load data to db! Error: %s", err)
             # skip this chunk
             return
 
@@ -136,18 +149,21 @@ class MovieETL(ETL):
                     fk_field=TableFKFieldsEnum.person_id.value,
                 )
         except DBError as err:
-            logger.error("Failed to set foreign keys. Error: %s", err, exc_info=True)
+            logger.exception("Failed to set foreign keys. Error: %s", err)
 
 
 async def run_movie_etl():
     etl = MovieETL()
+    await etl.source_db_client.init_db()
     await etl.target_db_client.init_db()
 
     try:
         await etl.run()
     except ETLError as err:
-        logger.error("ETL failed! Error: %s", err, exc_info=True)
+        logger.exception("ETL failed! Error: %s", err)
         return
+    finally:
+        await etl.source_db_client.close_db()
 
     logger.info("All data has been processed.")
 
