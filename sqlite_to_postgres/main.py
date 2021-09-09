@@ -67,9 +67,7 @@ class MovieETL(ETL):
     async def extract(
         self, table_name: TableNameEnum
     ) -> t.AsyncIterator[t.List[BaseModel]]:
-        """
-        Extract data from source to in-memory storage named self.raw_data.
-        """
+        """Extract data from source."""
         schema = getattr(SchemaByTableEnum, table_name)
 
         async for chunk in self.source_db_client.fetch(
@@ -86,10 +84,7 @@ class MovieETL(ETL):
     async def transform(
         self, raw_data: t.List[BaseModel]
     ) -> t.List[t.Dict[str, t.Any]]:
-        """
-        Transform extracted data and save it to in-memory storage named
-        self.transformed_data.
-        """
+        """Transform extracted data."""
         # В комменте был вопрос, поэтому я отвечаю. Не очень хочется связывать
         # пидантик схемы с клиентом к бд, т.к. в схемах может быть дополнительная
         # логика по трансформации данных. Либо в этом методе может быть такая
