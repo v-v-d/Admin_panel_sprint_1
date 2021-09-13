@@ -13,10 +13,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = False
 
-try:
-    ALLOWED_HOSTS = json.loads(os.getenv('ALLOWED_HOSTS'))
-except (TypeError, json.decoder.JSONDecodeError):
-    ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 
 
 INSTALLED_APPS = [
@@ -26,6 +23,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'rest_framework',
+    'drf_yasg',
 
     'movies',
 ]
@@ -106,3 +106,8 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'api.pagination.PrimitivePagination',
+    'PAGE_SIZE': 50,
+}
