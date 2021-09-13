@@ -1,9 +1,20 @@
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Q
+from django_filters import rest_framework as filters
+from rest_framework import viewsets
 
 from api.v1.serializers import FilmWorkSerializer
 from movies.models import FilmWork, FilmWorkPersonRole
-from rest_framework import viewsets
+
+
+class FilmWorkFilter(filters.FilterSet):
+    genres = filters.CharFilter(
+        field_name="genrefilmwork__genre__name", lookup_expr='icontains'
+    )
+
+    class Meta:
+        model = FilmWork
+        fields = ('genres', )
 
 
 class FilmWorkViewSet(viewsets.ReadOnlyModelViewSet):
@@ -34,3 +45,6 @@ class FilmWorkViewSet(viewsets.ReadOnlyModelViewSet):
         .all()
     )
     serializer_class = FilmWorkSerializer
+    filter_backends = (filters.filters.SearchFilter, filters.DjangoFilterBackend)
+    search_fields = ('title', 'description')
+    filterset_class = FilmWorkFilter
