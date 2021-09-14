@@ -13,5 +13,8 @@ sudo docker-compose up --build etl
 ```shell
 sudo docker-compose up --build etl
 ```
-4. В браузере зайти в админку джанго с кредами login: root, pass: 1 http://127.0.0.1:8000/admin
+4. В браузере зайти в админку джанго http://0.0.0.0:8000/admin
+   - суперюзер - login: root, pass: 1
+   - админ - login: admin, pass: 1
+5. Документация по API доступна только админам и находится тут http://0.0.0.0:8000/api/docs/
 
