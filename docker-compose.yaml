@@ -5,12 +5,11 @@ services:
     container_name: admin-app
     build:
       context: .
-      dockerfile: Dockerfile
     depends_on:
       - db
-    command: sh -c "python manage.py migrate && python manage.py makemigrations && python manage.py migrate --fake && python manage.py create_superuser && python manage.py runserver 0.0.0.0:8000"
-    ports:
-      - "8000:8000"
+    command: sh -c "python manage.py migrate && python manage.py makemigrations && python manage.py migrate --fake && python manage.py create_users && python manage.py runserver 0.0.0.0:8000"
+    expose:
+      - "8000"
     volumes:
       - ./movies_admin:/app
     environment:
@@ -20,7 +19,30 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - SECRET_KEY=ultrasupersecretkey
-      - ALLOWED_HOSTS=["*"]
+      - ALLOWED_HOSTS=*
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+
+  db:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      - POSTGRES_PASSWORD=passwd
+    ports:
+      - "8432:5432"
+    volumes:
+      - ./schema_design/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  nginx:
+    image: nginx:1.21.3
+    container_name: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./configs:/etc/nginx/conf.d:ro
+      - ./movies_admin/static:/static
+    depends_on:
+      - app
+    ports:
+      - "80:80"
 
   etl:
     container_name: etl
@@ -32,13 +54,3 @@ services:
     command: sh -c "python main.py"
     volumes:
       - ./sqlite_to_postgres:/app
-
-  db:
-    image: postgres:13
-    container_name: postgres
-    environment:
-      - POSTGRES_PASSWORD=passwd
-    ports:
-      - "8432:5432"
-    volumes:
-      - ./schema_design/init.sql:/docker-entrypoint-initdb.d/init.sql

@@ -69,7 +69,7 @@ class FilmWork(AbstractTimeStamped, AbstractUUID):
         verbose_name_plural = _('film works')
         db_table = '"content"."film_work"'
         indexes = [
-            models.Index(fields=['creation_date', 'rating'])
+            models.Index(fields=('creation_date', 'rating'))
         ]
 
     def __str__(self):
@@ -83,7 +83,7 @@ class GenreFilmWork(AbstractUUID):
 
     class Meta:
         db_table = '"content"."genre_film_work"'
-        unique_together = ['film_work', 'genre']
+        unique_together = ('film_work', 'genre')
 
     def __str__(self):
         return str(self.pk)
@@ -103,7 +103,7 @@ class PersonFilmWork(AbstractUUID):
 
     class Meta:
         db_table = '"content"."person_film_work"'
-        unique_together = ['film_work', 'person', 'role']
+        unique_together = ('film_work', 'person', 'role')
 
     def __str__(self):
         return str(self.pk)
