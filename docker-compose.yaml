@@ -7,38 +7,31 @@ services:
       context: .
     depends_on:
       - db
-    command: sh -c "python manage.py migrate && python manage.py makemigrations && python manage.py migrate --fake && python manage.py create_users && python manage.py runserver 0.0.0.0:8000"
     expose:
       - "8000"
     volumes:
       - ./movies_admin:/app
-    environment:
-      - DB_NAME=movies
-      - DB_USER=postgres
-      - DB_PASSWORD=passwd
-      - DB_HOST=db
-      - DB_PORT=5432
-      - SECRET_KEY=ultrasupersecretkey
-      - ALLOWED_HOSTS=*
-      - DJANGO_SETTINGS_MODULE=config.settings.prod
+    env_file:
+      - .env
 
   db:
     image: postgres:13
     container_name: postgres
-    environment:
-      - POSTGRES_PASSWORD=passwd
+    env_file:
+      - .env
     ports:
       - "8432:5432"
     volumes:
       - ./schema_design/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./dbdata:/var/lib/postgresql/data
 
   nginx:
     image: nginx:1.21.3
     container_name: nginx
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./configs:/etc/nginx/conf.d:ro
-      - ./movies_admin/static:/static
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/configs:/etc/nginx/conf.d:ro
+      - ./movies_admin/data:/data
     depends_on:
       - app
     ports:

@@ -1,5 +1,5 @@
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 from django_filters import rest_framework as filters
 from rest_framework import viewsets
 from rest_framework.filters import SearchFilter
@@ -19,33 +19,31 @@ class FilmWorkFilter(filters.FilterSet):
 
 
 class FilmWorkViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = (
-        FilmWork.objects
-        .prefetch_related('genres', 'persons')
-        .annotate(
-            genres_names=ArrayAgg(
-                'genrefilmwork__genre__name',
-                distinct=True
-            ),
-            actors=ArrayAgg(
-                'personfilmwork__person__full_name',
-                filter=Q(personfilmwork__role=FilmWorkPersonRole.ACTOR),
-                distinct=True
-            ),
-            directors=ArrayAgg(
-                'personfilmwork__person__full_name',
-                filter=Q(personfilmwork__role=FilmWorkPersonRole.DIRECTOR),
-                distinct=True
-            ),
-            writers=ArrayAgg(
-                'personfilmwork__person__full_name',
-                filter=Q(personfilmwork__role=FilmWorkPersonRole.WRITER),
-                distinct=True
-            ),
-        )
-        .all()
-    )
     serializer_class = FilmWorkSerializer
     filter_backends = (SearchFilter, filters.DjangoFilterBackend)
     search_fields = ('title', 'description')
     filterset_class = FilmWorkFilter
+
+    def get_queryset(self) -> QuerySet:
+        return (
+            FilmWork.objects
+            .prefetch_related('genres', 'persons')
+            .annotate(
+                genres_names=ArrayAgg(
+                    'genrefilmwork__genre__name',
+                    distinct=True
+                ),
+                actors=self._aggregate_person(FilmWorkPersonRole.ACTOR),
+                directors=self._aggregate_person(FilmWorkPersonRole.DIRECTOR),
+                writers=self._aggregate_person(FilmWorkPersonRole.WRITER),
+            )
+            .all()
+        )
+
+    @staticmethod
+    def _aggregate_person(role: FilmWorkPersonRole) -> ArrayAgg:
+        return ArrayAgg(
+            'personfilmwork__person__full_name',
+            filter=Q(personfilmwork__role=role),
+            distinct=True
+        )
