@@ -17,4 +17,4 @@ ENV PYTHONPATH=/app
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-CMD gunicorn config.wsgi:application --bind 0.0.0.0:8000
+CMD gunicorn -w 3 config.wsgi:application --bind 0.0.0.0:8000
