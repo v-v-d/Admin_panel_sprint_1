@@ -38,5 +38,5 @@ sudo docker-compose up --build nginx
 ```shell
 sudo docker-compose up nginx
 ```
-2. Повторяем пункты 6-7 из предыдущей инструкции
+2. Повторяем пункты 4-5 из предыдущей инструкции
 

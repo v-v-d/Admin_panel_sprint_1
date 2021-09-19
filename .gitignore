@@ -126,3 +126,5 @@ dmypy.json
 
 movies_admin/data
 dbdata
+
+docker-compose.override.yml
