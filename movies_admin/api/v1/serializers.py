@@ -18,6 +18,7 @@ class FilmWorkSerializer(serializers.ModelSerializer):
             'creation_date',
             'rating',
             'type',
+            'subscription_required',
             'genres',
             'actors',
             'directors',

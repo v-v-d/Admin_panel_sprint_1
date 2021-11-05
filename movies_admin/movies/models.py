@@ -63,6 +63,7 @@ class FilmWork(AbstractTimeStamped, AbstractUUID):
     type = models.CharField(_('type'), max_length=20, choices=FilmWorkType.choices, default=FilmWorkType.MOVIE)
     genres = models.ManyToManyField(Genre, through='GenreFilmWork')
     persons = models.ManyToManyField(Person, through='PersonFilmWork')
+    subscription_required = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = _('film work')

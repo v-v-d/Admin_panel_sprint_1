@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS content.film_work (
     file_path VARCHAR(255),
     rating FLOAT,
     type VARCHAR(20) NOT NULL,
+    subscription_required BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE
 );
