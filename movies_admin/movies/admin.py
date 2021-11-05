@@ -22,12 +22,12 @@ class GenreFilmWorkInline(NonExtra, admin.TabularInline):
 
 @admin.register(FilmWork)
 class FilmWorkAdmin(PageLimit, admin.ModelAdmin):
-    list_display = ('title', 'type', 'creation_date', 'rating')
-    list_filter = ('type', 'rating')
+    list_display = ('title', 'type', 'creation_date', 'rating', 'subscription_required')
+    list_filter = ('type', 'subscription_required')
     search_fields = ('title', 'description', 'type')
     fields = (
         'title', 'type', 'description', 'creation_date', 'certificate',
-        'file_path', 'rating'
+        'file_path', 'rating', 'subscription_required'
     )
     inlines = (GenreFilmWorkInline, PersonFilmWorkInline)
 

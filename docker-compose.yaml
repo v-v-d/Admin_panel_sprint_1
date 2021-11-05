@@ -24,6 +24,9 @@ services:
     volumes:
       - ./schema_design/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./dbdata:/var/lib/postgresql/data
+    networks:
+      yandex:
+      default:
 
   nginx:
     image: nginx:1.21.3
@@ -47,3 +50,8 @@ services:
     command: sh -c "python main.py"
     volumes:
       - ./sqlite_to_postgres:/app
+
+networks:
+  yandex:
+    external: true
+  default:

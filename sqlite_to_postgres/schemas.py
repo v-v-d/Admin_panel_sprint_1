@@ -17,6 +17,7 @@ class FilmWorkSchema(BaseModel):
     type: t.Optional[str]
     created_at: datetime
     updated_at: datetime
+    subscription_required: bool
 
 
 class GenreFilmWorkSchema(BaseModel):
